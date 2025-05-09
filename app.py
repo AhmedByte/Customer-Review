@@ -81,6 +81,10 @@ if st.button("Predict"):
 if st.session_state.history:
     st.subheader("Review Prediction History")
     history_df = pd.DataFrame(st.session_state.history, columns=["Review", "Prediction"])
+    
+    # Add an index column starting from 1
+    history_df.index = history_df.index + 1
+    
     st.write(history_df)
 
 # Button to clear history
