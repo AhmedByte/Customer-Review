@@ -1,6 +1,4 @@
-
-
-
+import nltk
 import streamlit as st
 import joblib
 import re
@@ -9,12 +7,24 @@ import torch.nn as nn
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
-# تحميل الموديلات
-vectorizer = joblib.load(r"C:\Users\Ahmed\Desktop\NLP project\vectorizer.pkl")
-log_model = joblib.load(r"C:\Users\Ahmed\Desktop\NLP project\logistic_regression_model.pkl")
-bayes_model = joblib.load(r"C:\Users\Ahmed\Desktop\NLP project\naive_bayes_model.pkl")
+# Ensure required NLTK data is available
+def download_nltk_resources():
+    try:
+        stopwords.words('english')
+    except LookupError:
+        nltk.download('stopwords')
 
-# تعريف موديل الـ ANN
+    try:
+        WordNetLemmatizer().lemmatize('test')
+    except LookupError:
+        nltk.download('wordnet')
+
+download_nltk_resources()
+
+vectorizer = joblib.load("./vectorizer.pkl")
+log_model = joblib.load("./logistic_regression_model.pkl")
+bayes_model = joblib.load("./naive_bayes_model.pkl")
+
 class ANNModel(nn.Module):
     def __init__(self, input_dim):
         super(ANNModel, self).__init__()
@@ -26,13 +36,12 @@ class ANNModel(nn.Module):
         x = self.relu(self.fc1(x))
         return self.fc2(x)
 
-# تهيئة و تحميل موديل الـ ANN
+
 input_dim = vectorizer.transform(["sample"]).shape[1]
 ann_model = ANNModel(input_dim)
-ann_model.load_state_dict(torch.load(r"C:\Users\Ahmed\Desktop\NLP project\ann_model.pth"))
+ann_model.load_state_dict(torch.load("./ann_model.pth"))
 ann_model.eval()
 
-# دالة التنظيف
 def process_review(text):
     stop_words = stopwords.words('english')
     lemmatizer = WordNetLemmatizer()
@@ -42,7 +51,7 @@ def process_review(text):
     cleaned = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
     return ' '.join(cleaned)
 
-# واجهة Streamlit
+
 st.title("Sentiment Prediction App")
 st.write("ادخل الريفيو واختر الموديل")
 
