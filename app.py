@@ -7,19 +7,31 @@ import torch.nn as nn
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
-# Ensure required NLTK data is available
+import nltk
+import os
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+
+
+nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
+os.makedirs(nltk_data_dir, exist_ok=True)
+
+nltk.data.path.append(nltk_data_dir)
+
+# Function to download required resources locally
 def download_nltk_resources():
     try:
         stopwords.words('english')
     except LookupError:
-        nltk.download('stopwords')
+        nltk.download('stopwords', download_dir=nltk_data_dir)
 
     try:
         WordNetLemmatizer().lemmatize('test')
     except LookupError:
-        nltk.download('wordnet')
+        nltk.download('wordnet', download_dir=nltk_data_dir)
 
 download_nltk_resources()
+
 
 vectorizer = joblib.load("./vectorizer.pkl")
 log_model = joblib.load("./logistic_regression_model.pkl")
