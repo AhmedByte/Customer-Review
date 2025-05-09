@@ -1,7 +1,7 @@
-import nltk
 import streamlit as st
 import joblib
 import re
+import pandas as pd
 import torch
 import torch.nn as nn
 import pandas as pd
@@ -12,6 +12,7 @@ import nltk
 import os
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+
 
 
 nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
@@ -38,6 +39,9 @@ vectorizer = joblib.load("./vectorizer.pkl")
 log_model = joblib.load("./logistic_regression_model.pkl")
 bayes_model = joblib.load("./naive_bayes_model.pkl")
 
+
+# Define ANN Model
+
 class ANNModel(nn.Module):
     def __init__(self, input_dim):
         super(ANNModel, self).__init__()
@@ -49,12 +53,14 @@ class ANNModel(nn.Module):
         x = self.relu(self.fc1(x))
         return self.fc2(x)
 
-
+# Initialize and load ANN model
 input_dim = vectorizer.transform(["sample"]).shape[1]
 ann_model = ANNModel(input_dim)
 ann_model.load_state_dict(torch.load("./ann_model.pth"))
 ann_model.eval()
 
+
+# Text preprocessing function
 def process_review(text):
     stop_words = stopwords.words('english')
     lemmatizer = WordNetLemmatizer()
@@ -99,7 +105,9 @@ if st.button("Predict"):
     st.success(f"Prediction: {label}")
 
     # Save the input and prediction to history
+
     st.session_state.history.append((model_choice,user_input, label))
+
 
 # Display history of predictions
 if st.session_state.history:
