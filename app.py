@@ -4,6 +4,7 @@ import joblib
 import re
 import torch
 import torch.nn as nn
+import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
@@ -63,24 +64,31 @@ def process_review(text):
     cleaned = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
     return ' '.join(cleaned)
 
-
+# Streamlit UI
 st.title("Sentiment Prediction App")
-st.write("ادخل الريفيو واختر الموديل")
+st.write("Enter a review and choose a model for prediction.")
 
 user_input = st.text_area("Review Text")
 
 model_choice = st.selectbox("Select Model", ["Logistic Regression", "Naive Bayes", "ANN (Neural Network)"])
 
+# Initialize session state for storing history
+if 'history' not in st.session_state:
+    st.session_state.history = []
+
+# Function to clear history
+def clear_history():
+    st.session_state.history = []
+
+# Predict sentiment
 if st.button("Predict"):
     cleaned_text = process_review(user_input)
     vectorized_input = vectorizer.transform([cleaned_text])
 
     if model_choice == "Logistic Regression":
         prediction = log_model.predict(vectorized_input)[0]
-
     elif model_choice == "Naive Bayes":
         prediction = bayes_model.predict(vectorized_input)[0]
-
     elif model_choice == "ANN (Neural Network)":
         input_tensor = torch.tensor(vectorized_input.toarray(), dtype=torch.float32)
         with torch.no_grad():
@@ -89,3 +97,19 @@ if st.button("Predict"):
 
     label = "Positive 😊" if prediction == 1 else "Negative 😞"
     st.success(f"Prediction: {label}")
+
+    # Save the input and prediction to history
+    st.session_state.history.append((model_choice,user_input, label))
+
+# Display history of predictions
+if st.session_state.history:
+    st.subheader("Review Prediction History")
+    history_df = pd.DataFrame(st.session_state.history, columns=["Model","Review", "Prediction"])
+    
+    # Add an index column starting from 1
+    history_df.index = history_df.index + 1
+    
+    st.write(history_df)
+
+# Button to clear history
+st.button("Clear History", on_click=clear_history)
