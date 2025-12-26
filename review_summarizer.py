@@ -4,7 +4,8 @@ from transformers import pipeline
 # تحميل الموديل مرة واحدة
 summarizer = pipeline(
     "summarization",
-    model="t5-small",
+    model="./models/t5-small",
+    tokenizer="models/t5-small",
     framework="pt"
 )
 
