@@ -17,3 +17,6 @@ review_app/
 # OS files (optional)
 .DS_Store
 Thumbs.db
+
+
+models/t5-small

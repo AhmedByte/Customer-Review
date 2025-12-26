@@ -62,6 +62,17 @@ conda activate review_app
 ```bash
 pip install -r requirements.txt
 ```
+# Important Note About T5 Model
+
+The repository does **not include the T5 model files** because they are larger than GitHub's 100MB limit.
+
+# Download the T5 model locally (first-time setup):
+```bash
+python install_t5_model_local.py
+```
+This script downloads the T5-small model from Hugging Face and saves it in the models/t5-small folder.
+Once downloaded, the app can run offline without internet
+
 # Run the Streamlit app
 ```bash
 streamlit run app.py
@@ -71,7 +82,7 @@ streamlit run app.py
 
 Notes
 
-The app uses T5-small Transformer for summarization; it runs on CPU and may be slower for very large datasets.
+The app uses T5-small Transformer for summarization; it may be slower for very large datasets if you use the CPU.
 
 Sentiment prediction models include Logistic Regression, Naive Bayes, and ANN (Neural Network).
 
