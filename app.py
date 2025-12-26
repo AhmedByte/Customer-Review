@@ -2,31 +2,27 @@ import streamlit as st
 import joblib
 import re
 import pandas as pd
-import torch
-import torch.nn as nn
-import pandas as pd
+from tensorflow.keras.models import load_model
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-
 import nltk
 import os
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
+
+from review_summarizer import get_products, summarize_negative_reviews, summarize_product
+from topn import get_top_products
+from review_summarizer import summarize_product
 
 
-
+# --- NLTK setup ---
 nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
 os.makedirs(nltk_data_dir, exist_ok=True)
-
 nltk.data.path.append(nltk_data_dir)
 
-# Function to download required resources locally
 def download_nltk_resources():
     try:
         stopwords.words('english')
     except LookupError:
         nltk.download('stopwords', download_dir=nltk_data_dir)
-
     try:
         WordNetLemmatizer().lemmatize('test')
     except LookupError:
@@ -34,33 +30,13 @@ def download_nltk_resources():
 
 download_nltk_resources()
 
+# --- Load models & vectorizer ---
+vectorizer = joblib.load("./models/sentiment_tfidf_vectorizer.pkl")
+log_model = joblib.load("./models/sentiment_logisticRegression_model.pkl")
+bayes_model = joblib.load("./models/sentiment_naiveBayes_model.pkl")
+ann_model = load_model("./models/nn_sentiment_model.h5")
 
-vectorizer = joblib.load("./vectorizer.pkl")
-log_model = joblib.load("./logistic_regression_model.pkl")
-bayes_model = joblib.load("./naive_bayes_model.pkl")
-
-
-# Define ANN Model
-
-class ANNModel(nn.Module):
-    def __init__(self, input_dim):
-        super(ANNModel, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 128)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(128, 2)
-
-    def forward(self, x):
-        x = self.relu(self.fc1(x))
-        return self.fc2(x)
-
-# Initialize and load ANN model
-input_dim = vectorizer.transform(["sample"]).shape[1]
-ann_model = ANNModel(input_dim)
-ann_model.load_state_dict(torch.load("./ann_model.pth"))
-ann_model.eval()
-
-
-# Text preprocessing function
+# --- Preprocessing ---
 def process_review(text):
     stop_words = stopwords.words('english')
     lemmatizer = WordNetLemmatizer()
@@ -70,54 +46,87 @@ def process_review(text):
     cleaned = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
     return ' '.join(cleaned)
 
-# Streamlit UI
-st.title("Sentiment Prediction App")
-st.write("Enter a review and choose a model for prediction.")
+# --- Streamlit UI ---
+st.title("Customer Review App")
 
-user_input = st.text_area("Review Text")
+tab1, tab2, tab3 = st.tabs([
+    "Sentiment Prediction",
+    "Negative Reviews Summarization",
+    "Top Products Insights"
+])
 
-model_choice = st.selectbox("Select Model", ["Logistic Regression", "Naive Bayes", "ANN (Neural Network)"])
+# --------------------- TAB 1: Sentiment Prediction ---------------------
+with tab1:
+    st.subheader("Enter a review to predict sentiment")
+    user_input = st.text_area("Review Text")
+    model_choice = st.selectbox("Select Model", ["Logistic Regression", "Naive Bayes", "ANN (Neural Network)"])
 
-# Initialize session state for storing history
-if 'history' not in st.session_state:
-    st.session_state.history = []
+    if 'history' not in st.session_state:
+        st.session_state.history = []
 
-# Function to clear history
-def clear_history():
-    st.session_state.history = []
+    def clear_history():
+        st.session_state.history = []
 
-# Predict sentiment
-if st.button("Predict"):
-    cleaned_text = process_review(user_input)
-    vectorized_input = vectorizer.transform([cleaned_text])
+    if st.button("Predict"):
+        cleaned_text = process_review(user_input)
+        vectorized_input = vectorizer.transform([cleaned_text])
 
-    if model_choice == "Logistic Regression":
-        prediction = log_model.predict(vectorized_input)[0]
-    elif model_choice == "Naive Bayes":
-        prediction = bayes_model.predict(vectorized_input)[0]
-    elif model_choice == "ANN (Neural Network)":
-        input_tensor = torch.tensor(vectorized_input.toarray(), dtype=torch.float32)
-        with torch.no_grad():
-            output = ann_model(input_tensor)
-            prediction = torch.argmax(output, dim=1).item()
+        if model_choice == "Logistic Regression":
+            prediction = log_model.predict(vectorized_input)[0]
+        elif model_choice == "Naive Bayes":
+            prediction = bayes_model.predict(vectorized_input)[0]
+        elif model_choice == "ANN (Neural Network)":
+            input_array = vectorized_input.toarray().astype('float32')
+            y_pred_prob = ann_model.predict(input_array)
+            prediction = y_pred_prob.argmax(axis=1)[0]
 
-    label = "Positive 😊" if prediction == 1 else "Negative 😞"
-    st.success(f"Prediction: {label}")
+        label_map = {0: "Negative 😞", 1: "Positive 😊", 2: "Neutral 😐"}
+        label = label_map[prediction]
 
-    # Save the input and prediction to history
+        st.success(f"Prediction: {label}")
+        st.session_state.history.append((model_choice, user_input, label))
 
-    st.session_state.history.append((model_choice,user_input, label))
+    if st.session_state.history:
+        st.subheader("Prediction History")
+        history_df = pd.DataFrame(st.session_state.history, columns=["Model","Review", "Prediction"])
+        history_df.index = history_df.index + 1
+        st.write(history_df)
+
+    st.button("Clear History", on_click=clear_history)
+
+# --------------------- TAB 2: Negative Reviews Summarization ---------------------
+with tab2:
+    st.subheader("Negative Reviews Analysis (Preloaded Data)")
+
+    products = get_products()
+    selected_product = st.selectbox(
+        "Select Product",
+        products
+    )
+
+    if st.button("Summarize Negative Reviews"):
+        with st.spinner("Analyzing customer complaints..."):
+            summary = summarize_negative_reviews(selected_product)
+
+        st.subheader("Main Problems Reported by Customers")
+        st.write(summary)
 
 
-# Display history of predictions
-if st.session_state.history:
-    st.subheader("Review Prediction History")
-    history_df = pd.DataFrame(st.session_state.history, columns=["Model","Review", "Prediction"])
-    
-    # Add an index column starting from 1
-    history_df.index = history_df.index + 1
-    
-    st.write(history_df)
+# --------------------- TAB 3: Top Products Insights ---------------------
+with tab3:
+    st.subheader("Top Products Insights")
 
-# Button to clear history
-st.button("Clear History", on_click=clear_history)
+    sentiment = st.selectbox("Select Sentiment", ["positive", "negative"])
+    top_n = st.slider("Number of Products", 1, 10, 5)
+
+    if st.button("Show Top Products", key="show_top_products"):
+        top_products = get_top_products(sentiment, top_n)
+
+        if not top_products:
+            st.warning("No products found for this sentiment.")
+        else:
+            for i, product in enumerate(top_products, start=1):
+                st.markdown(f"### {i}. {product}")
+                summary = summarize_product(product, sentiment)
+                st.write(summary)
+                st.divider()

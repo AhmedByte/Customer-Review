@@ -1,0 +1,19 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# NLTK data folder
+nltk_data/
+
+# Virtual environment folders
+env/
+venv/
+review_app/
+
+# Jupyter Notebook checkpoints (optional)
+.ipynb_checkpoints/
+
+# OS files (optional)
+.DS_Store
+Thumbs.db
