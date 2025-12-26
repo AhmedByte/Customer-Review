@@ -51,17 +51,21 @@ This is a **Streamlit-based application** for analyzing customer reviews. It pro
 # Clone the repository
 git clone https://github.com/AhmedByte/Customer-Review.git
 cd Customer-Review
+```
 
 # Create and activate a Python environment (recommended)
+```bash
 conda create -n review_app python=3.10
 conda activate review_app
-
+```
 # Install required packages
+```bash
 pip install -r requirements.txt
-
+```
 # Run the Streamlit app
+```bash
 streamlit run app.py
-
+```
 
 
 
