@@ -1,7 +1,6 @@
 import pandas as pd
 from transformers import pipeline
 
-# تحميل الموديل مرة واحدة
 summarizer = pipeline(
     "summarization",
     model="./models/t5-small",
@@ -15,7 +14,7 @@ DF['Sentiment'] = DF['Sentiment'].str.lower()
 DF['Final Review'] = DF['Final Review'].astype(str)
 
 def get_products():
-    """ترجع المنتجات اللي عندها Negative reviews فقط"""
+    """ negative only products list """
     neg_df = DF[DF['Sentiment'] == "negative"]
     return sorted(neg_df['product_name'].unique())
 
@@ -28,7 +27,6 @@ def chunk_text(text, max_words=400):
     ]
 
 def summarize_negative_reviews(product_name):
-    """تلخيص كل الـ negative reviews لمنتج معين"""
 
     neg_reviews = DF[
         (DF['product_name'] == product_name) &
@@ -52,7 +50,6 @@ def summarize_negative_reviews(product_name):
         )
         summaries.append(out[0]['summary_text'])
 
-    # تلخيص نهائي (hierarchical summarization)
     if len(summaries) > 1:
         final_text = " ".join(summaries)
         final_summary = summarizer(
@@ -79,7 +76,6 @@ def summarize_product(product_name, sentiment="negative"):
     if reviews.empty:
         return "No reviews available."
 
-    # نحد عدد الريفيوهات عشان السرعة
     combined_text = " ".join(reviews.tolist()[:10])
 
     output = summarizer(
